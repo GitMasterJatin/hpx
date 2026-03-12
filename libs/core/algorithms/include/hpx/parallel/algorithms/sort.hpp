@@ -217,7 +217,14 @@ namespace hpx::parallel {
             reference val = *first;
             RandomIt c_first = first + 1, c_last = last - 1;
 
-            while (comp(*c_first, val))
+            // Note: the c_last scans are safe without an explicit lower-bound
+            // check: val == *first acts as a sentinel because
+            // comp(val, *first) == comp(val, val) == false for any strict weak
+            // ordering, so c_last will stop at 'first' at the earliest.
+            // The c_first scans have no natural upper sentinel, so we must
+            // guard against c_first reaching 'last' to avoid undefined
+            // behaviour (out-of-bounds dereference leading to heap corruption).
+            while (c_first != last && comp(*c_first, val))
             {
                 ++c_first;
             }
@@ -232,7 +239,7 @@ namespace hpx::parallel {
 #else
                 std::iter_swap(c_first++, c_last--);
 #endif
-                while (comp(*c_first, val))
+                while (c_first != last && comp(*c_first, val))
                 {
                     ++c_first;
                 }
