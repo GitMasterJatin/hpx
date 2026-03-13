@@ -125,6 +125,35 @@ void test_sort2()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Edge-case tests added for issue #6974:
+//   - all-equal: reproduces the c_first out-of-bounds scan (GCC-12 UB)
+//   - boundary: exercises sizes at/around sort_limit_per_task (65536)
+//   - small: N = 0..3, bypasses the parallel path entirely
+void test_sort3()
+{
+    using namespace hpx::execution;
+
+    // all-equal elements with parallel execution policies
+    test_sort_all_equal(seq, int());
+    test_sort_all_equal(par, int());
+    test_sort_all_equal(par_unseq, int());
+    test_sort_all_equal(seq, double());
+    test_sort_all_equal(par, double());
+
+    // sizes straddling the parallel threshold (65535 / 65536 / 65537)
+    test_sort_boundary(seq, int());
+    test_sort_boundary(par, int());
+    test_sort_boundary(par_unseq, int());
+
+    // trivial ranges (0, 1, 2, 3 elements)
+    test_sort_small(seq, int());
+    test_sort_small(par, int());
+    test_sort_small(par_unseq, int());
+    test_sort_small(seq, double());
+    test_sort_small(par, double());
+}
+
+////////////////////////////////////////////////////////////////////////////////
 int hpx_main(hpx::program_options::variables_map& vm)
 {
     unsigned int seed = (unsigned int) std::time(nullptr);
@@ -136,6 +165,7 @@ int hpx_main(hpx::program_options::variables_map& vm)
 
     test_sort1();
     test_sort2();
+    test_sort3();
     return hpx::local::finalize();
 }
 

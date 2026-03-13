@@ -779,3 +779,77 @@ void test_sort1_async_string(
     bool is_sorted = (verify_(c, comp, elapsed, true) != 0);
     HPX_TEST(is_sorted);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// all-equal elements: every comparison returns false, so c_first scan in
+// sort_thread has no sentinel and must be guarded against walking past last.
+// This is the exact data pattern that triggered the GCC-12 heap corruption
+// (malloc_consolidate: unaligned fastbin chunk) reported in issue #6974.
+template <typename ExPolicy, typename T>
+void test_sort_all_equal(ExPolicy&& policy, T)
+{
+    static_assert(hpx::is_execution_policy<ExPolicy>::value,
+        "hpx::is_execution_policy<ExPolicy>::value");
+    msg(typeid(ExPolicy).name(), typeid(T).name(), "all-equal", sync, random);
+
+    // Use a size that forces the parallel path (> sort_limit_per_task = 65536)
+    constexpr std::size_t N = 200000;
+    std::vector<T> c(N, T(42));
+
+    std::uint64_t t = hpx::chrono::high_resolution_clock::now();
+    hpx::ranges::sort(std::forward<ExPolicy>(policy), c.begin(), c.end());
+    std::uint64_t elapsed = hpx::chrono::high_resolution_clock::now() - t;
+
+    bool is_sorted = (verify_(c, std::less<T>(), elapsed, true) != 0);
+    HPX_TEST(is_sorted);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// boundary sizes: test at, just below, and just above the parallel-threshold
+// (sort_limit_per_task = 1 << 16 = 65536) to exercise the path where
+// exactly one or two recursive tasks are spawned.
+template <typename ExPolicy, typename T>
+void test_sort_boundary(ExPolicy&& policy, T)
+{
+    static_assert(hpx::is_execution_policy<ExPolicy>::value,
+        "hpx::is_execution_policy<ExPolicy>::value");
+
+    // Three sizes that straddle the parallel threshold
+    for (std::size_t n : {std::size_t(65535), std::size_t(65536),
+             std::size_t(65537)})
+    {
+        std::vector<T> c(n);
+        rnd_fill<T>(c, (std::numeric_limits<T>::min)(),
+            (std::numeric_limits<T>::max)(), T(std::rand()));
+
+        std::uint64_t t = hpx::chrono::high_resolution_clock::now();
+        hpx::ranges::sort(std::forward<ExPolicy>(policy), c.begin(), c.end());
+        std::uint64_t elapsed = hpx::chrono::high_resolution_clock::now() - t;
+
+        bool is_sorted = (verify_(c, std::less<T>(), elapsed, true) != 0);
+        HPX_TEST(is_sorted);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// small ranges: N = 0, 1, 2, 3 — ensure the algorithm handles trivial sizes
+// without touching the parallel partition path at all.
+template <typename ExPolicy, typename T>
+void test_sort_small(ExPolicy&& policy, T)
+{
+    static_assert(hpx::is_execution_policy<ExPolicy>::value,
+        "hpx::is_execution_policy<ExPolicy>::value");
+
+    for (std::size_t n :
+        {std::size_t(0), std::size_t(1), std::size_t(2), std::size_t(3)})
+    {
+        std::vector<T> c(n);
+        rnd_fill<T>(c, (std::numeric_limits<T>::min)(),
+            (std::numeric_limits<T>::max)(), T(std::rand()));
+
+        hpx::ranges::sort(std::forward<ExPolicy>(policy), c.begin(), c.end());
+
+        bool is_sorted = std::is_sorted(c.begin(), c.end());
+        HPX_TEST(is_sorted);
+    }
+}

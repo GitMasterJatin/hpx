@@ -27,13 +27,14 @@
 #define NUMELEMS 5000000
 #endif
 
-void test1()
+void test1(unsigned int seed)
 {
+    std::cout << "test1 seed: " << seed << std::endl;
     typedef std::less<std::uint64_t> compare;
 
     constexpr std::uint32_t NElem = NUMELEMS;
     std::vector<std::uint64_t> V1, V2;
-    std::mt19937_64 my_rand(std::rand());
+    std::mt19937_64 my_rand(seed);
     compare comp;
 
     for (std::uint32_t i = 0; i < NElem; ++i)
@@ -134,14 +135,15 @@ void test2()
         A[1000 + NELEM] == 999999999 && A[1001 + NELEM] == 999999999);
 }
 
-void test3()
+void test3(unsigned int seed)
 {
+    std::cout << "test3 seed: " << seed << std::endl;
     typedef std::less<std::uint32_t> compare;
 
     constexpr std::uint32_t NElem = NUMELEMS;
     std::vector<std::uint32_t> V1, V2;
     V1.reserve(NElem);
-    std::mt19937 my_rand(std::rand());
+    std::mt19937 my_rand(seed);
 
     for (std::uint32_t i = 0; i < NElem; ++i)
         V1.push_back(my_rand());
@@ -182,14 +184,15 @@ struct int_array
     }
 };
 
-void test4()
+void test4(unsigned int seed)
 {
+    std::cout << "test4 seed: " << seed << std::endl;
     std::less<std::uint64_t> cmp64;
     std::less<std::uint32_t> cmp32;
     std::less<std::uint16_t> cmp16;
     std::less<std::uint8_t> cmp8;
 
-    std::mt19937_64 my_rand(std::rand());
+    std::mt19937_64 my_rand(seed);
 
 #if defined(HPX_DEBUG)
     constexpr std::uint32_t NELEM = (1 << 18);
@@ -272,10 +275,10 @@ void test4()
 }
 
 template <typename IA>
-void test_int_array(std::uint32_t NELEM)
+void test_int_array(std::uint32_t NELEM, unsigned int seed)
 {
     typedef std::less<IA> compare;
-    std::mt19937_64 my_rand(std::rand());
+    std::mt19937_64 my_rand(seed);
 
     std::vector<IA> V1, V2;
     V1.reserve(NELEM);
@@ -294,27 +297,29 @@ void test_int_array(std::uint32_t NELEM)
     }
 }
 
-void test5()
+void test5(unsigned int seed)
 {
+    std::cout << "test5 seed: " << seed << std::endl;
 #if defined(HPX_DEBUG)
 #define NUMELEMS_SHIFT 13
 #else
 #define NUMELEMS_SHIFT 17
 #endif
 
-    test_int_array<int_array<1>>(1u << (NUMELEMS_SHIFT + 3));
-    test_int_array<int_array<2>>(1u << (NUMELEMS_SHIFT + 2));
-    test_int_array<int_array<4>>(1u << (NUMELEMS_SHIFT + 1));
-    test_int_array<int_array<8>>(1u << NUMELEMS_SHIFT);
-    test_int_array<int_array<16>>(1u << NUMELEMS_SHIFT);
-    test_int_array<int_array<32>>(1u << NUMELEMS_SHIFT);
-    test_int_array<int_array<64>>(1u << NUMELEMS_SHIFT);
-    test_int_array<int_array<128>>(1u << NUMELEMS_SHIFT);
+    test_int_array<int_array<1>>(1u << (NUMELEMS_SHIFT + 3), seed + 0u);
+    test_int_array<int_array<2>>(1u << (NUMELEMS_SHIFT + 2), seed + 1u);
+    test_int_array<int_array<4>>(1u << (NUMELEMS_SHIFT + 1), seed + 2u);
+    test_int_array<int_array<8>>(1u << NUMELEMS_SHIFT, seed + 3u);
+    test_int_array<int_array<16>>(1u << NUMELEMS_SHIFT, seed + 4u);
+    test_int_array<int_array<32>>(1u << NUMELEMS_SHIFT, seed + 5u);
+    test_int_array<int_array<64>>(1u << NUMELEMS_SHIFT, seed + 6u);
+    test_int_array<int_array<128>>(1u << NUMELEMS_SHIFT, seed + 7u);
 }
 
-void test6()
+void test6(unsigned int seed)
 {
-    std::mt19937_64 my_rand(std::rand());
+    std::cout << "test6 seed: " << seed << std::endl;
+    std::mt19937_64 my_rand(seed);
     constexpr std::uint32_t NELEM = 1 << 20;
     constexpr std::uint32_t NString = 100000;
 
@@ -377,12 +382,12 @@ int hpx_main(hpx::program_options::variables_map& vm)
     std::cout << "using seed: " << seed << std::endl;
     std::srand(seed);
 
-    test1();
+    test1(seed);
     test2();
-    test3();
-    test4();
-    test5();
-    test6();
+    test3(seed);
+    test4(seed);
+    test5(seed);
+    test6(seed);
 
     return hpx::local::finalize();
 }
