@@ -613,9 +613,11 @@ namespace hpx::compute::host {
                 {
                     HPX_ASSERT((reinterpret_cast<std::size_t>(page_ptr) &
                                    (threads::get_memory_page_size() - 1)) == 0);
-                    // trigger a memory read and rewrite without changing contents
-                    T volatile* vaddr = const_cast<T volatile*>(page_ptr);
-                    *vaddr = *vaddr;
+                    // Write the first byte of the page to trigger first-touch
+                    // without reading uninitialized memory (which would be UB
+                    // for non-trivial T and can be optimized away by the
+                    // compiler even for trivial types).
+                    *reinterpret_cast<volatile char*>(page_ptr) = 0;
 #ifdef NUMA_BINDING_ALLOCATOR_INIT_MEMORY
                     // show which cpu is actually being used
 #if defined(NUMA_ALLOCATOR_LINUX)
